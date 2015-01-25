@@ -5,23 +5,23 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.IOException;
 
+import javax.naming.LimitExceededException;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JScrollPane;
 import javax.swing.JSpinner;
 import javax.swing.JTextField;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.border.EmptyBorder;
-
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
-
 import javax.swing.JTextArea;
-
 import java.awt.Color;
+import javax.swing.JProgressBar;
 
 public class GUI extends JFrame {
 
@@ -33,7 +33,9 @@ public class GUI extends JFrame {
 	JSpinner start = new JSpinner();
 	JSpinner end = new JSpinner();
 	JTextField linkField;
-
+	JProgressBar progressBar = new JProgressBar();
+	JTextArea txtrData = new JTextArea();
+	Search search = new Search();
 	/**
 	 * Launch the application.
 	 */
@@ -55,7 +57,6 @@ public class GUI extends JFrame {
 	 */
 	public GUI() {
 		
-		JTextArea txtrData = new JTextArea();
 		txtrData.setWrapStyleWord(true);
 
 		setBackground(new Color(255, 255, 255));
@@ -74,8 +75,12 @@ public class GUI extends JFrame {
 		JButton btnFindMe = new JButton("Find Me");
 		btnFindMe.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				
-				searchStats(txtrData, username, start, end, comboBox_type, comboBox_gamemode, comboBox_timeFrame,linkField);
+				Thread t = new Thread(new Runnable() {
+			         public void run() {
+							search.searchStats(txtrData, username, start, end, comboBox_type, comboBox_gamemode, comboBox_timeFrame,linkField, progressBar);
+			         }
+				});
+				t.start();
 			}
 		});
 		btnFindMe.setBounds(12, 237, 117, 25);
@@ -141,104 +146,12 @@ public class GUI extends JFrame {
 		linkField.setText("Link will go here");
 		linkField.setToolTipText("Once we find your name a link to the page it's on will be put here");
 		contentPane.add(linkField);
+		
+		progressBar.setBounds(12, 205, 150, 20);
+		progressBar.setForeground(Color.red);
+		progressBar.setToolTipText("Progress Bar");
+		contentPane.add(progressBar);
+		
 	}
 	
-	public void searchStats(JTextArea txtrData, JTextField name, JSpinner start, JSpinner end, JComboBox type, JComboBox game, JComboBox time, JTextField link) {
-		
-		int page = (int) start.getValue();
-		String objective = null;
-		String gamemode = null;
-		String sortTime = null;
-		try {
-			
-			switch (type.getSelectedIndex()) {
-			case 0:
-				objective = "kills";
-				break;
-			case 1:
-				objective = "deaths";
-				break;
-			case 2:
-				objective = "kd";
-				break;
-			case 3:
-				objective = "kk";
-				break;
-			case 4:
-				objective = "cores_leaked";
-				break;
-			case 5:
-				objective = "wool_placed";
-				break;
-			case 6:
-				objective = "destroyables_destroyed";
-				break;
-			case 7:
-				objective = "playing_time";
-				break;
-			default:
-				break;
-			}
-			
-			switch (game.getSelectedIndex()) {
-			case 0:
-				gamemode = "all";
-				break;
-			case 1:
-				gamemode = "projectares";
-				break;
-			case 2:
-				gamemode = "blitz";
-				break;
-			case 3:
-				gamemode = "ghostsquadron";
-				break;
-			default:
-				break;
-			}
-			
-			switch (time.getSelectedIndex()) {
-			case 0:
-				sortTime = "day";
-				break;
-			case 1:
-				sortTime = "week";
-				break;
-			case 2:
-				sortTime = "eternity";
-				break;
-			default:
-				break;
-			}
-			
-			while(page <= (int) end.getValue()) {
-				Thread.sleep(250);
-				String url = "https://oc.tc/stats?game="+gamemode+"&page="+page+"&sort="+objective+"&time="+sortTime;
-				Document doc = Jsoup.connect(url).get();
-				String pageData = doc.html();
-				Document pageTextDoc = Jsoup.parse(pageData);
-				String pageText = pageTextDoc.text();
-				System.out.println(pageText);
-				if(pageText.toLowerCase().contains(" " + name.getText().toLowerCase() + " ")) {
-					
-					txtrData.setText("You are on page "+page);
-					link.setText(url);
-					break;
-				}
-				else
-					page+=1;
-			}if(page >= (int) end.getValue()) {
-				
-				txtrData.setText("We couldn't find you with the given parameters either the name you specified does not exist or it is beyond the page scope you entered!");
-			}
-			
-		} catch (IOException e1) {
-
-			e1.printStackTrace();
-			txtrData.setText("Woops something went wrong");
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-	}
 }
